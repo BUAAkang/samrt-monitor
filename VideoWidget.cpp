@@ -20,7 +20,7 @@ VideoWidget::VideoWidget(QWidget *parent)
     // 打开视频流
     const char *videoUrl = "rtsp://192.168.1.26:554/stream0"; // 替换为实际IP地址
     AVDictionary *opts = nullptr;
-    av_dict_set(&opts, "buffer_size", "2048576", 0); // 设置缓冲区大小为1MB
+    av_dict_set(&opts, "buffer_size", "3048576", 0); // 设置缓冲区大小为2MB
 
     if (avformat_open_input(&formatContext, videoUrl, nullptr, &opts) != 0) {
         qDebug() << "Could not open input";
@@ -77,7 +77,7 @@ VideoWidget::VideoWidget(QWidget *parent)
 
     // 初始化视频转换上下文
     swsContext = sws_getContext(codecContext->width, codecContext->height, codecContext->pix_fmt,
-                                codecContext->width, codecContext->height, AV_PIX_FMT_RGB24,
+                                codecContext->width, codecContext->height, AV_PIX_FMT_BGR24,
                                 SWS_BILINEAR, nullptr, nullptr, nullptr);
 
     connect(timer, &QTimer::timeout, this, &VideoWidget::onFrameDecoded);
@@ -128,26 +128,38 @@ void VideoWidget::onFrameDecoded()
                     cv::Mat mat(codecContext->height, codecContext->width, CV_8UC3, rgbFrame->data[0], rgbFrame->linesize[0]);
 
 
-                    cv::Mat edges;
-                    cv::cvtColor(mat, edges, cv::COLOR_RGB2GRAY);
-                    cv::Canny(edges, edges, 50, 150);//处理
+                    // cv::Mat edges;
+                    // cv::cvtColor(mat, edges, cv::COLOR_RGB2GRAY);
+                    // cv::Canny(edges, edges, 50, 150);//处理
 
-                    std::vector<cv::KeyPoint> keypoints;
-                    cv::Ptr<cv::FeatureDetector> detector = cv::ORB::create();
-                    detector->detect(edges, keypoints);
+                    // std::vector<cv::KeyPoint> keypoints;
+                    // cv::Ptr<cv::FeatureDetector> detector = cv::ORB::create();
+                    // detector->detect(edges, keypoints);
 
-                    cv::Mat keypointImage;
-                    cv::drawKeypoints(mat, keypoints, keypointImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
+                    // cv::Mat keypointImage;
+                    // cv::drawKeypoints(mat, keypoints, keypointImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
 
-                    // 轮廓分析
-                    std::vector<std::vector<cv::Point>> contours;
-                    cv::findContours(edges, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+                    // // 轮廓分析
+                    // std::vector<std::vector<cv::Point>> contours;
+                    // cv::findContours(edges, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
-                    cv::Mat contourImage = cv::Mat::zeros(edges.size(), CV_8UC3);
-                    cv::drawContours(keypointImage, contours, -1, cv::Scalar(0, 255, 0), 2);
+                    // // cv::Mat contourImage = cv::Mat::zeros(edges.size(), CV_8UC3);
+                    // cv::drawContours(keypointImage, contours, -1, cv::Scalar(0, 255, 0), 2);
 
 
-                    QImage img = matToQImage(keypointImage);
+
+
+                    // for (int i = 0; i < 10; ++i) {
+                    //     int r = mat.at<cv::Vec3b>(i, i)[2]; // 红色通道
+                    //     int g = mat.at<cv::Vec3b>(i, i)[1]; // 绿色通道
+                    //     int b = mat.at<cv::Vec3b>(i, i)[0]; // 蓝色通道
+                    //     qDebug() << "Pixel (" << i << ", " << i << ") RGB: (" << r << ", " << g << ", " << b << ")";
+                    // }
+
+
+
+
+                    QImage img = matToQImage(mat);
 
                     {
                         QMutexLocker locker(&mutex);
@@ -175,4 +187,11 @@ QImage VideoWidget::matToQImage(const cv::Mat &mat)
 void VideoWidget::pauseVideo()
 {
     isPaused = !isPaused; // 切换暂停状态
+
+    if (isPaused) {
+        timer->stop();
+        avcodec_flush_buffers(codecContext);
+    } else {
+        timer->start(33);
+    }
 }
