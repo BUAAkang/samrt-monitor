@@ -188,10 +188,4 @@ void VideoWidget::pauseVideo()
 {
     isPaused = !isPaused; // 切换暂停状态
 
-    if (isPaused) {
-        timer->stop();
-        avcodec_flush_buffers(codecContext);
-    } else {
-        timer->start(33);
-    }
 }
